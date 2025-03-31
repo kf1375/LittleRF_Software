@@ -29,7 +29,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "mpr121.h"
+#include "apds9960.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,7 +40,9 @@ typedef struct
   uint8_t               Height_Notification_Status;
   uint8_t               Color_Notification_Status;
   /* USER CODE BEGIN CUSTOM_APP_Context_t */
-
+  Height_MeasVal_t      MeasurementHeight;
+  Color_MeasVal_t       MeasurementColor;
+  uint8_t               TimerMeasurement_Id;
   /* USER CODE END CUSTOM_APP_Context_t */
 
   uint16_t              ConnectionHandle;
@@ -56,7 +59,7 @@ typedef struct
 
 /* Private macros -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define MEASUREMENT_INTERVAL (1000000/CFG_TS_TICK_VAL)  /**< 1s */
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -74,8 +77,14 @@ uint8_t UpdateCharData[512];
 uint8_t NotifyCharData[512];
 uint16_t Connection_Handle;
 /* USER CODE BEGIN PV */
-extern uint16_t heightValue;
-extern uint8_t colorValue[3];
+extern I2C_HandleTypeDef hi2c1;
+APDS9960_t apds;
+MPR121_t mpr;
+
+uint16_t analogValue;
+uint16_t redValue;
+uint16_t greenValue;
+uint16_t blueValue;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,17 +95,8 @@ static void Custom_Color_Update_Char(void);
 static void Custom_Color_Send_Notification(void);
 
 /* USER CODE BEGIN PFP */
-void charUpdateTask(void)
-{
-  static uint32_t updateTimer = 0;
-  uint32_t currentTime = HAL_GetTick();
-  if (currentTime - updateTimer > 2000) {
-    Custom_STM_App_Update_Char_Variable_Length(CUSTOM_STM_HEIGHT, (uint8_t *) &heightValue, 2);
-    Custom_STM_App_Update_Char_Variable_Length(CUSTOM_STM_COLOR, (uint8_t *) colorValue, 3);
-    updateTimer = currentTime;
-  }
-  UTIL_SEQ_SetTask(1 << CFG_TASK_CHAR_UPDATE, CFG_SCH_PRIO_0);
-}
+static void MeasurementTask(void);
+
 /* USER CODE END PFP */
 
 /* Functions Definition ------------------------------------------------------*/
@@ -180,12 +180,19 @@ void Custom_APP_Notification(Custom_App_ConnHandle_Not_evt_t *pNotification)
     case CUSTOM_CONN_HANDLE_EVT :
       /* USER CODE BEGIN CUSTOM_CONN_HANDLE_EVT */
 
+      /**
+       * It could be the enable notification is received twice without the disable notification in between
+       */
+      HW_TS_Stop(Custom_App_Context.TimerMeasurement_Id);
+      HW_TS_Start(Custom_App_Context.TimerMeasurement_Id, MEASUREMENT_INTERVAL);
+      HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, GPIO_PIN_SET);
       /* USER CODE END CUSTOM_CONN_HANDLE_EVT */
       break;
 
     case CUSTOM_DISCON_HANDLE_EVT :
       /* USER CODE BEGIN CUSTOM_DISCON_HANDLE_EVT */
-
+      HW_TS_Stop(Custom_App_Context.TimerMeasurement_Id);
+      HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, GPIO_PIN_RESET);
       /* USER CODE END CUSTOM_DISCON_HANDLE_EVT */
       break;
 
@@ -206,7 +213,17 @@ void Custom_APP_Notification(Custom_App_ConnHandle_Not_evt_t *pNotification)
 void Custom_APP_Init(void)
 {
   /* USER CODE BEGIN CUSTOM_APP_Init */
-
+//  MPR121_Init(&mpr, &hi2c1, MPR121_TOUCH_THRESHOLD_DEFAULT, MPR121_RELEASE_THRESHOLD_DEFAULT);
+  APDS9960_Init(&apds, &hi2c1);
+  APDS9960_EnableLightSensor(&apds, 0);
+  UTIL_SEQ_RegTask(1 << CFG_TASK_MEASUREMENT_ID, UTIL_SEQ_RFU, MeasurementTask);
+  Custom_App_Context.MeasurementHeight.value = 0;
+  Custom_App_Context.MeasurementColor.red = 0;
+  Custom_App_Context.MeasurementColor.green = 0;
+  Custom_App_Context.MeasurementColor.blue = 0;
+  Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.value);
+  Custom_STM_App_Update_Char(CUSTOM_STM_COLOR, (uint8_t *) &Custom_App_Context.MeasurementColor.red);
+  HW_TS_Create(CFG_TIM_PROC_ID_ISR, &(Custom_App_Context.TimerMeasurement_Id), hw_ts_Repeated, MeasurementTask);
   /* USER CODE END CUSTOM_APP_Init */
   return;
 }
@@ -301,5 +318,20 @@ void Custom_Color_Send_Notification(void) /* Property Notification */
 }
 
 /* USER CODE BEGIN FD_LOCAL_FUNCTIONS*/
-
+static void MeasurementTask(void)
+{
+  HAL_StatusTypeDef status;
+  // uint16_t cap_raw = MPR121_FilteredData(&mpr, 3);
+  status = APDS9960_ReadRGBLight(&apds, &redValue, &greenValue, &blueValue);
+  if (status != HAL_OK) {
+    return;
+  }
+  Custom_App_Context.MeasurementColor.red = redValue >> 8;
+  Custom_App_Context.MeasurementColor.green = greenValue >> 8;
+  Custom_App_Context.MeasurementColor.blue = blueValue >> 8;
+  // HAL_StatusTypeDef status = MPR121_ReadAnalogValue(&mpr121, 3, &analogValue);
+  // APDS9960_ReadRGB(&hi2c1, &redValue, &greenValue, &blueValue);
+  Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.value);
+  Custom_STM_App_Update_Char(CUSTOM_STM_COLOR, (uint8_t *) &Custom_App_Context.MeasurementColor.red);
+}
 /* USER CODE END FD_LOCAL_FUNCTIONS*/

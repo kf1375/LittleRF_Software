@@ -46,7 +46,15 @@ typedef struct
   uint16_t                                 ConnectionHandle;
 } Custom_App_ConnHandle_Not_evt_t;
 /* USER CODE BEGIN ET */
+typedef struct {
+  uint16_t value;
+} Height_MeasVal_t;
 
+typedef struct {
+  uint8_t red;
+  uint8_t green;
+  uint8_t blue;
+} Color_MeasVal_t;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/

@@ -73,8 +73,6 @@ void Error_Handler(void);
 #define CAP_S_GPIO_Port GPIOB
 #define CAP_D_Pin GPIO_PIN_1
 #define CAP_D_GPIO_Port GPIOB
-#define SWITCH_Pin GPIO_PIN_10
-#define SWITCH_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
 

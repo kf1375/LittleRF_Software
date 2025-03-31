@@ -309,7 +309,12 @@ static void ExitLowPower(void)
   {
 /* Restore the clock configuration of the application in this user section */
 /* USER CODE BEGIN ExitLowPower_1 */
-
+  LL_RCC_HSE_Enable();
+  __HAL_FLASH_SET_LATENCY(FLASH_LATENCY_3);
+  while(__HAL_FLASH_GET_LATENCY() != FLASH_LATENCY_3);
+  while(!LL_RCC_HSE_IsReady( ));
+  LL_RCC_SetSysClkSource(LL_RCC_SYS_CLKSOURCE_HSE);
+  while (LL_RCC_GetSysClkSource( ) != LL_RCC_SYS_CLKSOURCE_STATUS_HSE);
 /* USER CODE END ExitLowPower_1 */
   }
   else

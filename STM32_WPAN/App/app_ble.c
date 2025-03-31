@@ -266,8 +266,7 @@ void APP_BLE_Init(void)
   tBleStatus ret = BLE_STATUS_INVALID_PARAMS;
 #endif /* RADIO_ACTIVITY_EVENT != 0 */
   /* USER CODE BEGIN APP_BLE_Init_1 */
-  UTIL_SEQ_RegTask(1 << CFG_TASK_CHAR_UPDATE, UTIL_SEQ_RFU, charUpdateTask);
-  UTIL_SEQ_SetTask(1 << CFG_TASK_CHAR_UPDATE, CFG_SCH_PRIO_0);
+
   /* USER CODE END APP_BLE_Init_1 */
   SHCI_C2_Ble_Init_Cmd_Packet_t ble_init_cmd_packet =
   {

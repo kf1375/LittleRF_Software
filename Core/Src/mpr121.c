@@ -27,7 +27,7 @@ HAL_StatusTypeDef MPR121_Init(MPR121_t *dev, I2C_HandleTypeDef *hi2c, uint8_t to
   if (MPR121_WriteRegister(dev, MPR121_SOFTRESET, 0x63) != HAL_OK) {
     return HAL_ERROR;
   }
-  HAL_Delay(10);
+  HAL_Delay(1);
   if (MPR121_WriteRegister(dev, MPR121_ECR, 0x0) != HAL_OK) {
     return HAL_ERROR;
   }
@@ -229,7 +229,7 @@ HAL_StatusTypeDef MPR121_WriteRegister(MPR121_t *dev, uint8_t reg, uint8_t value
  */
 HAL_StatusTypeDef MPR121_ReadRegister8(MPR121_t *dev, uint8_t reg, uint8_t *data)
 {
-  return HAL_I2C_Mem_Read(dev->hi2c, (MPR121_ADDR << 1), reg, I2C_MEMADD_SIZE_8BIT, data, 1, 1000);
+  return HAL_I2C_Mem_Read(dev->hi2c, (MPR121_ADDR << 1), reg, I2C_MEMADD_SIZE_8BIT, data, 1, HAL_MAX_DELAY);
 }
 
 /**
@@ -241,28 +241,12 @@ HAL_StatusTypeDef MPR121_ReadRegister8(MPR121_t *dev, uint8_t reg, uint8_t *data
  */
 HAL_StatusTypeDef MPR121_ReadRegister16(MPR121_t *dev, uint8_t reg, uint16_t *data)
 {
-//  uint8_t buffer[2];
-//
-//  if (HAL_I2C_Mem_Read(dev->hi2c, (MPR121_ADDR << 1), reg, I2C_MEMADD_SIZE_8BIT, buffer, 2, 100) != HAL_OK) {
-//    return HAL_ERROR;
-//  }
-//  *data = (buffer[1] << 8) | buffer[0];
-//
-//  return HAL_OK;
-  uint8_t val_byte;
-  *data = 0;
+  uint8_t buffer[2];
 
-  /* Read low byte register */
-  if (MPR121_ReadRegister8(dev, reg, &val_byte) != HAL_OK) {
+  if (HAL_I2C_Mem_Read(dev->hi2c, (MPR121_ADDR << 1), reg, I2C_MEMADD_SIZE_8BIT, buffer, 2, HAL_MAX_DELAY) != HAL_OK) {
     return HAL_ERROR;
   }
-  *data = val_byte;
-
-  /* Read high byte register */
-  if (MPR121_ReadRegister8(dev, reg + 1, &val_byte) != HAL_OK) {
-    return HAL_ERROR;
-  }
-  *data = *data + ((uint16_t) val_byte << 8);
+  *data = (buffer[1] << 8) | buffer[0];
 
   return HAL_OK;
 }

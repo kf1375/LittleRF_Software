@@ -215,8 +215,8 @@ void Custom_APP_Init(void)
 {
   /* USER CODE BEGIN CUSTOM_APP_Init */
   MPR121_Init(&mpr, &hi2c1, MPR121_TOUCH_THRESHOLD_DEFAULT, MPR121_RELEASE_THRESHOLD_DEFAULT);
-//  APDS9960_Init(&apds, &hi2c1);
-//  APDS9960_EnableLightSensor(&apds, 0);
+  APDS9960_Init(&apds, &hi2c1);
+  APDS9960_EnableLightSensor(&apds, 0);
   UTIL_SEQ_RegTask(1 << CFG_TASK_MEASUREMENT_ID, UTIL_SEQ_RFU, MeasurementTask);
   Custom_App_Context.MeasurementHeight.value = 0;
   Custom_App_Context.MeasurementColor.red = 0;
@@ -322,17 +322,15 @@ void Custom_Color_Send_Notification(void) /* Property Notification */
 static void MeasurementTask(void)
 {
   HAL_StatusTypeDef status;
-//  for (uint8_t i = 0; i < 12; i++) {
-    capValues[3] = MPR121_BaseLineData(&mpr, 3);
-//  }
-//  status = APDS9960_ReadRGBLight(&apds, &redValue, &greenValue, &blueValue);
-//  if (status != HAL_OK) {
-//    return;
-//  }
+  capValues[3] = MPR121_BaseLineData(&mpr, 3);
+  status = APDS9960_ReadRGBLight(&apds, &redValue, &greenValue, &blueValue);
+  if (status != HAL_OK) {
+    return;
+  }
   Custom_App_Context.MeasurementHeight.value = capValues[3];
-  Custom_App_Context.MeasurementColor.red = redValue >> 8;
-  Custom_App_Context.MeasurementColor.green = greenValue >> 8;
-  Custom_App_Context.MeasurementColor.blue = blueValue >> 8;
+  Custom_App_Context.MeasurementColor.red = redValue;
+  Custom_App_Context.MeasurementColor.green = greenValue;
+  Custom_App_Context.MeasurementColor.blue = blueValue;
 
   Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.value);
   Custom_STM_App_Update_Char(CUSTOM_STM_COLOR, (uint8_t *) &Custom_App_Context.MeasurementColor.red);

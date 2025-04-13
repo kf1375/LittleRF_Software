@@ -66,7 +66,7 @@ extern uint16_t Connection_Handle;
 
 /* Private variables ---------------------------------------------------------*/
 uint16_t SizeHeight = 2;
-uint16_t SizeColor = 3;
+uint16_t SizeColor = 6;
 
 /**
  * START of Section BLE_DRIVER_CONTEXT

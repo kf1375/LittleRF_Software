@@ -51,9 +51,9 @@ typedef struct {
 } Height_MeasVal_t;
 
 typedef struct {
-  uint8_t red;
-  uint8_t green;
-  uint8_t blue;
+  uint16_t red;
+  uint16_t green;
+  uint16_t blue;
 } Color_MeasVal_t;
 /* USER CODE END ET */
 

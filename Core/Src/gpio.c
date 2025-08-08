@@ -63,7 +63,7 @@ void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : TCS_LED_Pin */
   GPIO_InitStruct.Pin = TCS_LED_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(TCS_LED_GPIO_Port, &GPIO_InitStruct);

@@ -37,6 +37,7 @@ typedef enum
   /* LiquidMonitoringService */
   CUSTOM_STM_HEIGHT,
   CUSTOM_STM_COLOR,
+  CUSTOM_STM_HEIGHTCAL,
 } Custom_STM_Char_Opcode_t;
 
 typedef enum
@@ -49,6 +50,9 @@ typedef enum
   CUSTOM_STM_COLOR_READ_EVT,
   CUSTOM_STM_COLOR_NOTIFY_ENABLED_EVT,
   CUSTOM_STM_COLOR_NOTIFY_DISABLED_EVT,
+  /* heightCalibration */
+  CUSTOM_STM_HEIGHTCAL_WRITE_NO_RESP_EVT,
+  CUSTOM_STM_HEIGHTCAL_WRITE_EVT,
   CUSTOM_STM_NOTIFICATION_COMPLETE_EVT,
 
   CUSTOM_STM_BOOT_REQUEST_EVT
@@ -76,6 +80,7 @@ typedef struct
 /* Exported constants --------------------------------------------------------*/
 extern uint16_t SizeHeight;
 extern uint16_t SizeColor;
+extern uint16_t SizeHeightcal;
 
 /* USER CODE BEGIN EC */
 

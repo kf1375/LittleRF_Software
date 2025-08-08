@@ -42,6 +42,7 @@ typedef struct
   /* USER CODE BEGIN CUSTOM_APP_Context_t */
   Height_MeasVal_t      MeasurementHeight;
   Color_MeasVal_t       MeasurementColor;
+  Height_CalVal_t       CalibrationHight;
   uint8_t               TimerMeasurement_Id;
   /* USER CODE END CUSTOM_APP_Context_t */
 
@@ -80,8 +81,6 @@ uint16_t Connection_Handle;
 extern I2C_HandleTypeDef hi2c1;
 APDS9960_t apds;
 MPR121_t mpr;
-
-uint16_t capValues[12];
 
 uint16_t redValue;
 uint16_t greenValue;
@@ -149,6 +148,18 @@ void Custom_STM_App_Notification(Custom_STM_App_Notification_evt_t *pNotificatio
       /* USER CODE END CUSTOM_STM_COLOR_NOTIFY_DISABLED_EVT */
       break;
 
+    case CUSTOM_STM_HEIGHTCAL_WRITE_NO_RESP_EVT:
+      /* USER CODE BEGIN CUSTOM_STM_HEIGHTCAL_WRITE_NO_RESP_EVT */
+
+      /* USER CODE END CUSTOM_STM_HEIGHTCAL_WRITE_NO_RESP_EVT */
+      break;
+
+    case CUSTOM_STM_HEIGHTCAL_WRITE_EVT:
+      /* USER CODE BEGIN CUSTOM_STM_HEIGHTCAL_WRITE_EVT */
+
+      /* USER CODE END CUSTOM_STM_HEIGHTCAL_WRITE_EVT */
+      break;
+
     case CUSTOM_STM_NOTIFICATION_COMPLETE_EVT:
       /* USER CODE BEGIN CUSTOM_STM_NOTIFICATION_COMPLETE_EVT */
 
@@ -187,6 +198,7 @@ void Custom_APP_Notification(Custom_App_ConnHandle_Not_evt_t *pNotification)
       HW_TS_Stop(Custom_App_Context.TimerMeasurement_Id);
       HW_TS_Start(Custom_App_Context.TimerMeasurement_Id, MEASUREMENT_INTERVAL);
       HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, GPIO_PIN_SET);
+      HAL_GPIO_WritePin(TCS_LED_GPIO_Port, TCS_LED_Pin, GPIO_PIN_SET);
       /* USER CODE END CUSTOM_CONN_HANDLE_EVT */
       break;
 
@@ -194,6 +206,7 @@ void Custom_APP_Notification(Custom_App_ConnHandle_Not_evt_t *pNotification)
       /* USER CODE BEGIN CUSTOM_DISCON_HANDLE_EVT */
       HW_TS_Stop(Custom_App_Context.TimerMeasurement_Id);
       HAL_GPIO_WritePin(LED_STATUS_GPIO_Port, LED_STATUS_Pin, GPIO_PIN_RESET);
+      HAL_GPIO_WritePin(TCS_LED_GPIO_Port, TCS_LED_Pin, GPIO_PIN_RESET);
       /* USER CODE END CUSTOM_DISCON_HANDLE_EVT */
       break;
 
@@ -218,11 +231,16 @@ void Custom_APP_Init(void)
   APDS9960_Init(&apds, &hi2c1);
   APDS9960_EnableLightSensor(&apds, 0);
   UTIL_SEQ_RegTask(1 << CFG_TASK_MEASUREMENT_ID, UTIL_SEQ_RFU, MeasurementTask);
-  Custom_App_Context.MeasurementHeight.value = 0;
+  Custom_App_Context.MeasurementHeight.raw = 0.0;
+  Custom_App_Context.MeasurementHeight.mm = 0.0;
   Custom_App_Context.MeasurementColor.red = 0;
   Custom_App_Context.MeasurementColor.green = 0;
   Custom_App_Context.MeasurementColor.blue = 0;
-  Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.value);
+  Custom_App_Context.CalibrationHight.h1 = 0.0;
+  Custom_App_Context.CalibrationHight.r1 = 0.0;
+  Custom_App_Context.CalibrationHight.h2 = 0.0;
+  Custom_App_Context.CalibrationHight.r2 = 0.0;
+  Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.raw);
   Custom_STM_App_Update_Char(CUSTOM_STM_COLOR, (uint8_t *) &Custom_App_Context.MeasurementColor.red);
   HW_TS_Create(CFG_TIM_PROC_ID_ISR, &(Custom_App_Context.TimerMeasurement_Id), hw_ts_Repeated, MeasurementTask);
   /* USER CODE END CUSTOM_APP_Init */
@@ -230,6 +248,16 @@ void Custom_APP_Init(void)
 }
 
 /* USER CODE BEGIN FD */
+void Custom_App_StartCalibration(uint8_t *data, uint16_t length)
+{
+  if (length != 16)
+    return;
+
+  memcpy(&Custom_App_Context.CalibrationHight.h1, &data[0],  sizeof(float));
+  memcpy(&Custom_App_Context.CalibrationHight.r1, &data[4],  sizeof(float));
+  memcpy(&Custom_App_Context.CalibrationHight.h2, &data[8],  sizeof(float));
+  memcpy(&Custom_App_Context.CalibrationHight.r2, &data[12], sizeof(float));
+}
 
 /* USER CODE END FD */
 
@@ -322,17 +350,18 @@ void Custom_Color_Send_Notification(void) /* Property Notification */
 static void MeasurementTask(void)
 {
   HAL_StatusTypeDef status;
-  capValues[3] = MPR121_BaseLineData(&mpr, 3);
+  float rawHeight = (float) MPR121_BaseLineData(&mpr, 3);
   status = APDS9960_ReadRGBLight(&apds, &redValue, &greenValue, &blueValue);
   if (status != HAL_OK) {
     return;
   }
-  Custom_App_Context.MeasurementHeight.value = capValues[3];
+
+  Custom_App_Context.MeasurementHeight.raw = rawHeight;
   Custom_App_Context.MeasurementColor.red = redValue;
   Custom_App_Context.MeasurementColor.green = greenValue;
   Custom_App_Context.MeasurementColor.blue = blueValue;
 
-  Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.value);
+  Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.raw);
   Custom_STM_App_Update_Char(CUSTOM_STM_COLOR, (uint8_t *) &Custom_App_Context.MeasurementColor.red);
 }
 /* USER CODE END FD_LOCAL_FUNCTIONS*/

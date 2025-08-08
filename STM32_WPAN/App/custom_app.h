@@ -47,7 +47,8 @@ typedef struct
 } Custom_App_ConnHandle_Not_evt_t;
 /* USER CODE BEGIN ET */
 typedef struct {
-  uint16_t value;
+  float raw;
+  float mm;
 } Height_MeasVal_t;
 
 typedef struct {
@@ -55,6 +56,14 @@ typedef struct {
   uint16_t green;
   uint16_t blue;
 } Color_MeasVal_t;
+
+typedef struct {
+  float h1;
+  float r1;
+  float h2;
+  float r2;
+} Height_CalVal_t;
+
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -76,7 +85,7 @@ typedef struct {
 void Custom_APP_Init(void);
 void Custom_APP_Notification(Custom_App_ConnHandle_Not_evt_t *pNotification);
 /* USER CODE BEGIN EF */
-
+void Custom_App_StartCalibration(uint8_t *data, uint16_t length);
 /* USER CODE END EF */
 
 #ifdef __cplusplus

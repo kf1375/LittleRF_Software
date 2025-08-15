@@ -85,6 +85,8 @@ MPR121_t mpr;
 uint16_t redValue;
 uint16_t greenValue;
 uint16_t blueValue;
+
+Calibration_Data_t g_heightCalibration = {1.0f, 0.0f};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -240,6 +242,12 @@ void Custom_APP_Init(void)
   Custom_App_Context.CalibrationHight.r1 = 0.0;
   Custom_App_Context.CalibrationHight.h2 = 0.0;
   Custom_App_Context.CalibrationHight.r2 = 0.0;
+
+  if (!Custom_App_CalibrationData_Load(&g_heightCalibration)) {
+    Custom_App_Calibration_Defaults(&g_heightCalibration);
+    Custom_App_CalibrationData_Save(&g_heightCalibration);
+  }
+
   Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.raw);
   Custom_STM_App_Update_Char(CUSTOM_STM_COLOR, (uint8_t *) &Custom_App_Context.MeasurementColor.red);
   HW_TS_Create(CFG_TIM_PROC_ID_ISR, &(Custom_App_Context.TimerMeasurement_Id), hw_ts_Repeated, MeasurementTask);
@@ -257,6 +265,83 @@ void Custom_App_StartCalibration(uint8_t *data, uint16_t length)
   memcpy(&Custom_App_Context.CalibrationHight.r1, &data[4],  sizeof(float));
   memcpy(&Custom_App_Context.CalibrationHight.h2, &data[8],  sizeof(float));
   memcpy(&Custom_App_Context.CalibrationHight.r2, &data[12], sizeof(float));
+
+  // Calculate calibration
+  Calibration_Data_t cal;
+  cal.scale  = (Custom_App_Context.CalibrationHight.h2 - Custom_App_Context.CalibrationHight.h1)
+			       / (Custom_App_Context.CalibrationHight.r2 - Custom_App_Context.CalibrationHight.r1);
+  cal.offset = Custom_App_Context.CalibrationHight.h1 - (cal.scale * Custom_App_Context.CalibrationHight.r1);
+  cal.crc = Custom_App_CalculateCRC32(&cal, sizeof(Calibration_Data_t) - sizeof(uint32_t));
+  
+  g_heightCalibration = cal;
+
+  Custom_App_CalibrationData_Save(&cal);
+}
+
+uint32_t Custom_App_CalculateCRC32(const void *data, size_t length)
+{
+    uint32_t crc = CALIBRATION_CRC_INIT;
+    const uint8_t *p = (const uint8_t*)data;
+
+    while (length--) {
+        crc ^= *p++;
+        for (uint8_t i = 0; i < 8; i++)
+            crc = (crc >> 1) ^ (0xEDB88320U & -(crc & 1));
+    }
+    return ~crc;
+}
+
+uint8_t Custom_App_CalibrationData_IsValid(const Calibration_Data_t *cal)
+{
+  uint32_t crc_calc = Custom_App_CalculateCRC32(cal, sizeof(Calibration_Data_t) - sizeof(uint32_t));
+  return (crc_calc == cal->crc);
+}
+
+void Custom_App_CalibrationData_Save(const Calibration_Data_t *cal)
+{
+  HAL_FLASH_Unlock();
+
+  FLASH_EraseInitTypeDef erase;
+  uint32_t pageError;
+  erase.TypeErase = FLASH_TYPEERASE_PAGES;
+  erase.Page = 200;
+  erase.NbPages = 1;
+
+  if (HAL_FLASHEx_Erase(&erase, &pageError) != HAL_OK) {
+	  HAL_FLASH_Lock();
+	  return;
+  }
+
+  uint64_t *src = (uint64_t*)&cal;
+  for (uint32_t i = 0; i < sizeof(Calibration_Data_t) / 8; i++) {
+	  if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, CALIBRATION_FLASH_ADDRESS + (i * 8), src[i]) != HAL_OK) {
+		  HAL_FLASH_Lock();
+		  return;
+	  }
+  }
+
+  HAL_FLASH_Lock();
+}
+
+uint8_t Custom_App_CalibrationData_Load(Calibration_Data_t *out)
+{
+  memcpy(out, (void *)CALIBRATION_FLASH_ADDRESS, sizeof(Calibration_Data_t));
+  if (Custom_App_CalibrationData_IsValid(out))
+  {
+    return 1;
+  }
+  
+  out->scale = 1.0f;
+  out->offset = 0.0f;
+  out->crc = Custom_App_CalculateCRC32(out, sizeof(Calibration_Data_t) - sizeof(uint32_t));
+  return 0;
+}
+
+void Custom_App_Calibration_Defaults(Calibration_Data_t *out)
+{
+  out->scale  = 1.0f;
+  out->offset = 0.0f;
+  out->crc = Custom_App_CalculateCRC32(out, sizeof(Calibration_Data_t) - sizeof(uint32_t));
 }
 
 /* USER CODE END FD */
@@ -357,11 +442,13 @@ static void MeasurementTask(void)
   }
 
   Custom_App_Context.MeasurementHeight.raw = rawHeight;
+  Custom_App_Context.MeasurementHeight.mm = (rawHeight * g_heightCalibration.scale) + g_heightCalibration.offset;
   Custom_App_Context.MeasurementColor.red = redValue;
   Custom_App_Context.MeasurementColor.green = greenValue;
   Custom_App_Context.MeasurementColor.blue = blueValue;
 
   Custom_STM_App_Update_Char(CUSTOM_STM_HEIGHT, (uint8_t *) &Custom_App_Context.MeasurementHeight.raw);
-  Custom_STM_App_Update_Char(CUSTOM_STM_COLOR, (uint8_t *) &Custom_App_Context.MeasurementColor.red);
+	Custom_STM_App_Update_Char(CUSTOM_STM_COLOR,
+			(uint8_t*) &Custom_App_Context.MeasurementColor.red);
 }
 /* USER CODE END FD_LOCAL_FUNCTIONS*/

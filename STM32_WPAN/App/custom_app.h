@@ -58,11 +58,20 @@ typedef struct {
 } Color_MeasVal_t;
 
 typedef struct {
-  float h1;
-  float r1;
-  float h2;
-  float r2;
+  float h1; // Known reference height 1 (mm)
+  float r1; // Raw value 1
+  float h2; // Known reference height 2 (mm)
+  float r2; // Raw value 2
 } Height_CalVal_t;
+
+typedef struct {
+	float scale;  // mm per raw count
+	float offset; // mm
+	uint32_t crc; // CRC32 of scale + offset
+} Calibration_Data_t;
+
+#define CALIBRATION_FLASH_ADDRESS  ((uint32_t)0x080C8000U)  // Page 200 in 1MB flash (STM32WB55CGU6)
+#define CALIBRATION_CRC_INIT   0xFFFFFFFFU
 
 /* USER CODE END ET */
 
@@ -86,6 +95,12 @@ void Custom_APP_Init(void);
 void Custom_APP_Notification(Custom_App_ConnHandle_Not_evt_t *pNotification);
 /* USER CODE BEGIN EF */
 void Custom_App_StartCalibration(uint8_t *data, uint16_t length);
+
+uint32_t Custom_App_CalculateCRC32(const void *data, size_t length);
+uint8_t Custom_App_CalibrationData_IsValid(const Calibration_Data_t *cal);
+void Custom_App_CalibrationData_Save(const Calibration_Data_t *cal);
+uint8_t Custom_App_CalibrationData_Load(Calibration_Data_t *out);
+void Custom_App_Calibration_Defaults(Calibration_Data_t *out);
 /* USER CODE END EF */
 
 #ifdef __cplusplus

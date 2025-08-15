@@ -8,6 +8,7 @@
 #ifndef APDS9960_H
 #define APDS9960_H
 
+#include "stdint.h"
 #include "stm32wbxx_hal.h"  // Change this based on your STM32 series
 
 /* APDS-9960 I2C address */

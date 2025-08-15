@@ -9,6 +9,7 @@
 #define MPR121_H
 
 #include "stm32wbxx_hal.h"
+#include "stdint.h"
 
 #define MPR121_ADDR 0x5A                   ///< default I2C address
 #define MPR121_TOUCH_THRESHOLD_DEFAULT 12  ///< default touch threshold value

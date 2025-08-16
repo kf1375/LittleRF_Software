@@ -23,11 +23,8 @@ install_manifest.txt
 # CLion / JetBrains
 .idea/
 # Eclipse
-.project
-.cproject
 .settings/
 # STM32CubeIDE
-*.launch
 *.settings
 
 # --- STM32CubeMX ---
@@ -35,7 +32,6 @@ install_manifest.txt
 *.ioc-backup
 *.ioc-bak
 *.ioc-bkp
-*.mxproject
 *.tmp
 
 # Optional: ignore CubeMX generated source if you regenerate every time
@@ -53,3 +49,4 @@ desktop.ini
 
 # --- Logs ---
 *.log
+/Debug/

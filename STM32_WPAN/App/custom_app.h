@@ -64,11 +64,13 @@ typedef struct {
   float r2; // Raw value 2
 } Height_CalVal_t;
 
+#pragma pack(push, 1)
 typedef struct {
-	float scale;  // mm per raw count
-	float offset; // mm
-	uint32_t crc; // CRC32 of scale + offset
+  float scale;
+  float offset;
+  uint32_t crc;
 } Calibration_Data_t;
+#pragma pack(pop)
 
 #define CALIBRATION_FLASH_ADDRESS  ((uint32_t)0x080C8000U)  // Page 200 in 1MB flash (STM32WB55CGU6)
 #define CALIBRATION_CRC_INIT   0xFFFFFFFFU

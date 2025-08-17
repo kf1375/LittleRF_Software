@@ -312,12 +312,18 @@ void Custom_App_CalibrationData_Save(const Calibration_Data_t *cal)
 	  return;
   }
 
-  uint64_t *src = (uint64_t*)&cal;
-  for (uint32_t i = 0; i < sizeof(Calibration_Data_t) / 8; i++) {
-	  if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, CALIBRATION_FLASH_ADDRESS + (i * 8), src[i]) != HAL_OK) {
-		  HAL_FLASH_Lock();
-		  return;
-	  }
+  // Program first doubleword (bytes 0-7: scale and offset)
+  uint64_t *src = (uint64_t*)cal;
+  if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, CALIBRATION_FLASH_ADDRESS, src[0]) != HAL_OK) {
+    HAL_FLASH_Lock();
+    return;
+  }
+
+  // Program second doubleword (bytes 8-15): crc in lower 32 bits, 0xFFFFFFFF in upper 32 bits
+  uint64_t last_doubleword = ((uint64_t)0xFFFFFFFF << 32) | (uint64_t)cal->crc;
+  if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, CALIBRATION_FLASH_ADDRESS + 8, last_doubleword) != HAL_OK) {
+    HAL_FLASH_Lock();
+    return;
   }
 
   HAL_FLASH_Lock();
